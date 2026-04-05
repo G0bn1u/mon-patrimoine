@@ -8,8 +8,11 @@ export async function POST() {
       user: { client_user_id: 'wealth-os-user-1' },
       client_name: 'Wealth OS',
       products: [Products.Transactions],
-      country_codes: [CountryCode.Us],
+      // On repasse sur la France !
+      country_codes: [CountryCode.Fr], 
       language: 'fr',
+      // REMPLACE CETTE URL par ton vrai lien Vercel (indispensable pour l'Europe)
+      redirect_uri: 'https://mon-patrimoine-wheat.vercel.app/dashboard',
     };
 
     const response = await plaidClient.linkTokenCreate(request);
