@@ -1,39 +1,59 @@
 "use client";
 
-/* TAILWIND V4 SAFELIST - Ruse de Senior
-  bg-blue-500 text-blue-500 fill-blue-500 ring-blue-500 stroke-blue-500
-  bg-emerald-500 text-emerald-500 fill-emerald-500 ring-emerald-500 stroke-emerald-500
-  bg-amber-500 text-amber-500 fill-amber-500 ring-amber-500 stroke-amber-500
-  bg-indigo-500 text-indigo-500 fill-indigo-500 ring-indigo-500 stroke-indigo-500
-*/
-
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { usePlaidLink } from 'react-plaid-link';
 import { 
   Card, Text, AreaChart, DonutChart, Grid, Flex, ProgressBar, Title,
   Table, TableHead, TableHeaderCell, TableBody, TableRow, TableCell, Badge, Callout, Divider
 } from "@tremor/react";
 import { EyeIcon, EyeSlashIcon, ExclamationTriangleIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
 
+const safelist = "bg-blue-500 text-blue-500 fill-blue-500 ring-blue-500 stroke-blue-500 bg-emerald-500 text-emerald-500 fill-emerald-500 ring-emerald-500 stroke-emerald-500 bg-amber-500 text-amber-500 fill-amber-500 ring-amber-500 stroke-amber-500 bg-indigo-500 text-indigo-500 fill-indigo-500 ring-indigo-500 stroke-indigo-500";
+
 export default function DashboardPage() {
   const [privacyMode, setPrivacyMode] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   
-  // Data States
   const [familyAdvances, setFamilyAdvances] = useState<any[]>([]);
   const [netWorthHistory, setNetWorthHistory] = useState<any[]>([]);
   const [assetAllocation, setAssetAllocation] = useState<any[]>([]);
   
-  // Form States
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ description: "", amount: "", date: "", status: "En attente" });
   
-  // Simulator States
   const [monthlyInvestment, setMonthlyInvestment] = useState(200);
   const [expectedReturn, setExpectedReturn] = useState(5);
   const [duration, setDuration] = useState(20);
   
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [bankConnected, setBankConnected] = useState(false);
+
   const currentCCPBalance = 2450.00;
+
+  useEffect(() => {
+    const fetchLinkToken = async () => {
+      const response = await fetch('/api/plaid/create-link-token', { method: 'POST' });
+      const data = await response.json();
+      setLinkToken(data.link_token);
+    };
+    fetchLinkToken();
+  }, []);
+
+  const onSuccess = useCallback(async (public_token: string) => {
+    await fetch('/api/plaid/exchange-public-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ public_token })
+    });
+    setBankConnected(true);
+    alert("Banque connectée avec succès ! (Mode Sandbox)");
+  }, []);
+
+  const { open, ready } = usePlaidLink({
+    token: linkToken!,
+    onSuccess,
+  });
 
   async function fetchData() {
     const [advancesRes, historyRes, assetsRes] = await Promise.all([
@@ -64,20 +84,13 @@ export default function DashboardPage() {
     setIsSubmitting(false);
   };
 
-  // Logique du Simulateur d'intérêts composés
   const projectionData = useMemo(() => {
     let data = [];
     let currentCapital = 0;
     const annualRate = expectedReturn / 100;
-
     for (let year = 0; year <= duration; year++) {
-      if (year > 0) {
-        currentCapital = currentCapital * (1 + annualRate) + (monthlyInvestment * 12);
-      }
-      data.push({
-        year: `A${year}`,
-        Capital: Math.round(currentCapital)
-      });
+      if (year > 0) currentCapital = currentCapital * (1 + annualRate) + (monthlyInvestment * 12);
+      data.push({ year: `A${year}`, Capital: Math.round(currentCapital) });
     }
     return data;
   }, [monthlyInvestment, expectedReturn, duration]);
@@ -118,9 +131,24 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* ONGLETS 1, 2 ET 3 INCHANGÉS */}
         {activeTab === 0 && (
           <Grid numItemsSm={1} numItemsLg={3} className="gap-6 animate-in fade-in duration-300">
+            <Card className="col-span-1 lg:col-span-3 rounded-2xl ring-1 ring-slate-800 shadow-lg border-0 bg-slate-900 flex items-center justify-between">
+              <div>
+                <Title className="text-white">Comptes Synchronisés</Title>
+                <Text className="text-slate-400">Agrégez vos banques pour une mise à jour en temps réel.</Text>
+              </div>
+              {bankConnected ? (
+                <Badge color="emerald">Banque de test connectée</Badge>
+              ) : linkToken ? (
+                <button onClick={() => open()} disabled={!ready} className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors disabled:opacity-50">
+                  Connecter une banque
+                </button>
+              ) : (
+                <Text className="text-slate-400 animate-pulse text-sm">Initialisation sécurisée...</Text>
+              )}
+            </Card>
+
             <Card className="col-span-1 lg:col-span-2 rounded-2xl ring-1 ring-slate-800 shadow-lg border-0 bg-slate-900">
               <Title className="text-white mb-4">Évolution du patrimoine</Title>
               <AreaChart className="h-72 mt-4" data={netWorthHistory} index="date" categories={["patrimoine"]} colors={["blue"]} valueFormatter={(val) => privacyMode ? "****" : `${val} €`} showLegend={false} showGridLines={true} showYAxis={true} yAxisWidth={60} />
@@ -194,7 +222,6 @@ export default function DashboardPage() {
           </Grid>
         )}
 
-        {/* NOUVEAU SIMULATEUR DYNAMIQUE */}
         {activeTab === 3 && (
           <Grid numItemsSm={1} numItemsLg={3} className="gap-6 animate-in fade-in duration-300">
             <Card className="col-span-1 rounded-2xl ring-1 ring-slate-800 shadow-lg border-0 bg-slate-900">
