@@ -26,8 +26,16 @@
   --shadow-tremor-input: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-tremor-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-tremor-dropdown: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  
-  --radius-tremor-small: 0.375rem;
-  --radius-tremor-default: 0.5rem;
-  --radius-tremor-full: 9999px;
+}
+
+@layer base {
+  .dark {
+    --color-tremor-background-DEFAULT: #0f172a;
+    --color-tremor-background-muted: #1e293b;
+    --color-tremor-border-DEFAULT: #1e293b;
+    --color-tremor-ring-DEFAULT: #1e293b;
+    --color-tremor-content-DEFAULT: #94a3b8;
+    --color-tremor-content-emphasis: #f8fafc;
+    --color-tremor-brand-DEFAULT: #3b82f6;
+  }
 }
